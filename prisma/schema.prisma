@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model agency_member {
+  id                  BigInt                          @id @default(autoincrement())
+  district_id         BigInt
+  agency_code         String                          @unique(map: "agency_code") @db.VarChar(30)
+  legal_name          String                          @db.VarChar(150)
+  trade_name          String?                         @db.VarChar(150)
+  contact_person      String                          @db.VarChar(100)
+  contact_phone       String                          @db.VarChar(20)
+  contact_email       String?                         @db.VarChar(120)
+  address_line1       String?                         @db.VarChar(200)
+  address_line2       String?                         @db.VarChar(200)
+  city                String?                         @db.VarChar(80)
+  pincode             String?                         @db.VarChar(10)
+  gst_number          String?                         @db.VarChar(30)
+  membership_status   agency_member_membership_status
+  membership_start_dt DateTime?                       @db.Date
+  membership_end_dt   DateTime?                       @db.Date
+  created_at          DateTime                        @default(now()) @db.DateTime(0)
+  updated_at          DateTime                        @default(now()) @db.DateTime(0)
+  district_committee  district_committee              @relation(fields: [district_id], references: [id], map: "fk_agency_district")
+  user_account        user_account[]
+
+  @@index([district_id], map: "fk_agency_district")
+}
+
+model announcement {
+  id                 BigInt              @id @default(autoincrement())
+  level              announcement_level
+  state_id           BigInt?
+  district_id        BigInt?
+  title              String              @db.VarChar(150)
+  message            String              @db.Text
+  valid_from         DateTime            @db.DateTime(0)
+  valid_to           DateTime?           @db.DateTime(0)
+  created_by_user    BigInt
+  created_at         DateTime            @default(now()) @db.DateTime(0)
+  district_committee district_committee? @relation(fields: [district_id], references: [id], map: "fk_announcement_district")
+  state_committee    state_committee?    @relation(fields: [state_id], references: [id], map: "fk_announcement_state")
+  user_account       user_account        @relation(fields: [created_by_user], references: [id], map: "fk_announcement_user")
+
+  @@index([district_id], map: "fk_announcement_district")
+  @@index([state_id], map: "fk_announcement_state")
+  @@index([created_by_user], map: "fk_announcement_user")
+}
+
+model district_committee {
+  id               BigInt                    @id @default(autoincrement())
+  state_id         BigInt
+  district_code    String                    @unique(map: "district_code") @db.VarChar(20)
+  district_name    String                    @db.VarChar(100)
+  contact_person   String?                   @db.VarChar(100)
+  contact_phone    String?                   @db.VarChar(20)
+  contact_email    String?                   @db.VarChar(120)
+  status           district_committee_status
+  created_at       DateTime                  @default(now()) @db.DateTime(0)
+  updated_at       DateTime                  @default(now()) @db.DateTime(0)
+  agency_member    agency_member[]
+  announcement     announcement[]
+  state_committee  state_committee           @relation(fields: [state_id], references: [id], map: "fk_district_state")
+  meeting_schedule meeting_schedule[]
+  user_account     user_account[]
+
+  @@index([state_id], map: "fk_district_state")
+}
+
+model meeting_schedule {
+  id                 BigInt                 @id @default(autoincrement())
+  level              meeting_schedule_level
+  state_id           BigInt?
+  district_id        BigInt?
+  title              String                 @db.VarChar(150)
+  description        String?                @db.Text
+  meeting_datetime   DateTime               @db.DateTime(0)
+  venue              String?                @db.VarChar(200)
+  created_by_user    BigInt
+  created_at         DateTime               @default(now()) @db.DateTime(0)
+  district_committee district_committee?    @relation(fields: [district_id], references: [id], map: "fk_meeting_district")
+  state_committee    state_committee?       @relation(fields: [state_id], references: [id], map: "fk_meeting_state")
+  user_account       user_account           @relation(fields: [created_by_user], references: [id], map: "fk_meeting_user")
+
+  @@index([district_id], map: "fk_meeting_district")
+  @@index([state_id], map: "fk_meeting_state")
+  @@index([created_by_user], map: "fk_meeting_user")
+}
+
+model state_committee {
+  id                 BigInt                 @id @default(autoincrement())
+  state_code         String                 @unique(map: "state_code") @db.VarChar(20)
+  state_name         String                 @db.VarChar(100)
+  contact_person     String?                @db.VarChar(100)
+  contact_phone      String?                @db.VarChar(20)
+  contact_email      String?                @db.VarChar(120)
+  status             state_committee_status
+  created_at         DateTime               @default(now()) @db.DateTime(0)
+  updated_at         DateTime               @default(now()) @db.DateTime(0)
+  announcement       announcement[]
+  district_committee district_committee[]
+  meeting_schedule   meeting_schedule[]
+  user_account       user_account[]
+}
+
+model user_account {
+  id                 BigInt                 @id @default(autoincrement())
+  login_id           String                 @unique(map: "login_id") @db.VarChar(80)
+  password_hash      String                 @db.VarChar(255)
+  mobile_number      String                 @db.VarChar(20)
+  role_type          user_account_role_type
+  state_id           BigInt?
+  district_id        BigInt?
+  agency_id          BigInt?
+  is_active          Boolean                @default(true)
+  last_login_at      DateTime?              @db.DateTime(0)
+  created_at         DateTime               @default(now()) @db.DateTime(0)
+  updated_at         DateTime               @default(now()) @db.DateTime(0)
+  announcement       announcement[]
+  meeting_schedule   meeting_schedule[]
+  agency_member      agency_member?         @relation(fields: [agency_id], references: [id], map: "fk_user_agency")
+  district_committee district_committee?    @relation(fields: [district_id], references: [id], map: "fk_user_district")
+  state_committee    state_committee?       @relation(fields: [state_id], references: [id], map: "fk_user_state")
+
+  @@index([agency_id], map: "fk_user_agency")
+  @@index([district_id], map: "fk_user_district")
+  @@index([state_id], map: "fk_user_state")
+}
+
+enum announcement_level {
+  STATE
+  DISTRICT
+}
+
+enum meeting_schedule_level {
+  STATE
+  DISTRICT
+}
+
+enum user_account_role_type {
+  STATE
+  DISTRICT
+  AGENCY
+}
+
+enum state_committee_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum district_committee_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum agency_member_membership_status {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
