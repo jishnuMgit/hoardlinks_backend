@@ -11,6 +11,11 @@ import cookieParser from 'cookie-parser'
 import { corsOptions } from './config/index.js'
 import logger from 'morgan'
 
+// ✅ Fix BigInt JSON serialization
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 const app = express()
 
 let swaggerDocument
@@ -46,10 +51,7 @@ if (NODE_ENV !== 'production') {
 }
 
 //error middlewares
-// catch 404 and forward to error handler
 app.use(notFoundErr)
-
-//error handler
 app.use(errorHandler)
 
 export default app
