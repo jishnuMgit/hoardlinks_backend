@@ -123,3 +123,79 @@ export const getAnnouncementById = async (
     next(error);
   }
 };
+
+export const updateAnnouncement = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const {
+      level,
+      state_id,
+      district_id,
+      title,
+      message,
+      valid_from,
+      valid_to,
+    } = req.body;
+
+    const loggedUser = req.user; // { id, role_type }
+
+    if (!id) {
+      res.status(400).json({ message: "Announcement id is required" });
+      return;
+    }
+
+    // Check announcement exists
+    const existingAnnouncement = await prisma.announcement.findUnique({
+      where: { id: BigInt(id) },
+    });
+
+    if (!existingAnnouncement) {
+      res.status(404).json({ message: "Announcement not found" });
+      return;
+    }
+
+    // State-level validation
+    if (level === "STATE" && !state_id) {
+      res.status(400).json({
+        message: "state_id is required for STATE level announcement",
+      });
+      return;
+    }
+
+    // District-level validation
+    if (level === "DISTRICT" && !district_id) {
+      res.status(400).json({
+        message: "district_id is required for DISTRICT level announcement",
+      });
+      return;
+    }
+
+    const updatedAnnouncement = await prisma.announcement.update({
+      where: { id: BigInt(id) },
+      data: {
+        level: level ?? undefined,
+        state_id: state_id ? BigInt(state_id) : undefined,
+        district_id: district_id ? BigInt(district_id) : undefined,
+        title,
+        message,
+        valid_from: valid_from ? new Date(valid_from) : undefined,
+        valid_to: valid_to ? new Date(valid_to) : undefined,
+        // optional audit field if exists in schema
+        updated_by_user: loggedUser?.id ? Number(loggedUser.id) : undefined,
+      },
+    });
+
+    res.status(200).json({
+      message: "Announcement updated successfully",
+      data: serialize(updatedAnnouncement),
+    });
+  } catch (error) {
+    console.error("Error updating announcement:", error);
+    next(error);
+  }
+};

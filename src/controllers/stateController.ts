@@ -105,3 +105,70 @@ export const getStateById = async (
   }
 };
 
+export const updateState = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const {
+      state_code,
+      state_name,
+      contact_person,
+      contact_phone,
+      contact_email,
+      status,
+    } = req.body;
+
+    if (!id) {
+      res.status(400).json({ message: "State id is required" });
+      return;
+    }
+
+    // Check if state exists
+    const existingState = await prisma.state_committee.findUnique({
+      where: { id: BigInt(id) },
+    });
+
+    if (!existingState) {
+      res.status(404).json({ message: "State not found" });
+      return;
+    }
+
+    // If state_code is changing, check uniqueness
+    if (state_code && state_code !== existingState.state_code) {
+      const codeExists = await prisma.state_committee.findUnique({
+        where: { state_code },
+      });
+
+      if (codeExists) {
+        res.status(409).json({
+          message: "State with this code already exists",
+        });
+        return;
+      }
+    }
+
+    const updatedState = await prisma.state_committee.update({
+      where: { id: BigInt(id) },
+      data: {
+        state_code,
+        state_name,
+        contact_person,
+        contact_phone,
+        contact_email,
+        status,
+      },
+    });
+
+    res.status(200).json({
+      message: "State updated successfully",
+      data: serialize(updatedState),
+    });
+  } catch (error) {
+    console.error("Error updating state:", error);
+    next(createError(500, "Internal Server Error"));
+  }
+};

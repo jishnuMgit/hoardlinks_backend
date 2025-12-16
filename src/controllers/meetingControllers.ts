@@ -122,3 +122,81 @@ export const getMeetingById = async (
     next(error);
   }
 };
+
+
+export const updateMeeting = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const {
+      level,
+      state_id,
+      district_id,
+      title,
+      description,
+      meeting_datetime,
+      venue
+    } = req.body;
+
+    const loggedUser = req.user; // { id, role_type }
+
+    if (!id) {
+      res.status(400).json({ message: "Meeting id is required" });
+      return;
+    }
+
+    // Check meeting exists
+    const existingMeeting = await prisma.meeting_schedule.findUnique({
+      where: { id: BigInt(id) },
+    });
+
+    if (!existingMeeting) {
+      res.status(404).json({ message: "Meeting not found" });
+      return;
+    }
+
+    // Validate role logic if level is provided
+    if (level === "STATE" && !state_id) {
+      res.status(400).json({
+        message: "state_id is required for STATE level meeting."
+      });
+      return;
+    }
+
+    if (level === "DISTRICT" && !district_id) {
+      res.status(400).json({
+        message: "district_id is required for DISTRICT level meeting."
+      });
+      return;
+    }
+
+    const updatedMeeting = await prisma.meeting_schedule.update({
+      where: { id: BigInt(id) },
+      data: {
+        level: level ?? undefined,
+        state_id: state_id ? BigInt(state_id) : undefined,
+        district_id: district_id ? BigInt(district_id) : undefined,
+        title,
+        description,
+        meeting_datetime: meeting_datetime
+          ? new Date(meeting_datetime)
+          : undefined,
+        venue,
+        // Optional: track who updated
+        updated_by_user: loggedUser?.id ? Number(loggedUser.id) : undefined,
+      },
+    });
+
+    res.status(200).json({
+      message: "Meeting updated successfully",
+      data: serialize(updatedMeeting),
+    });
+  } catch (error) {
+    console.error("Error updating meeting:", error);
+    next(error);
+  }
+};

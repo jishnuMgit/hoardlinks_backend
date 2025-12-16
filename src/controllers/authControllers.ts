@@ -33,7 +33,7 @@ export const login = async (
     if (!login_id || !password) {
       return res.status(400).json({
         success: false,
-        message: "login_id and password are required."
+        message: "userName and password are required."
       });
     }
 
@@ -47,7 +47,7 @@ export const login = async (
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Invalid login_id or password."
+        message: "Invalid username or password."
       });
     }
 
