@@ -5,6 +5,7 @@ import  districtRoutes  from './districtRoutes.js'
 import agencyRoutes from './agencyRoutes.js'
 import meetingRoutes from './meetingRoutes.js'
 import announcement from './announcementRoutes.js'
+import profileRoutes from './profileRoutes.js'
 const router = express.Router()
 
 // API /api/v1
@@ -39,6 +40,6 @@ router
     /* #swagger.tags = ['Announcement routes']
     #swagger.responses[500] */
     announcement
-  )
+  ).use('/profile',profileRoutes)
   
 export default router
